@@ -1,7 +1,7 @@
 import { loadConfig as loadUserConfig } from "unconfig"
 import { configSchema } from "./schema"
 
-export async function loadConfig(cwd = process.cwd()) {
+export async function loadConfig(cwd: string) {
   try {
     const { config, sources } = await loadUserConfig({
       cwd,

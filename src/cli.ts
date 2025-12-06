@@ -6,7 +6,6 @@ export const program = new Command()
   .name("compoDocs")
   .description("Component documentation and code generation CLI")
   .version(VERSION)
-  .option("--config <path>", "config file path", "compodocs.config.ts")
-  .option("--cwd <path>", "current working directory", process.cwd())
+  .option("--config <dir>", "config directory", process.cwd())
 
 export default program
