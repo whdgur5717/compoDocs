@@ -19,7 +19,7 @@ export const buildConfigSchema = z
   .optional()
 
 export const configSchema = z.object({
-  workspace: workspaceConfigSchema.optional(),
+  workspace: workspaceConfigSchema,
   commands: z
     .object({
       generate: generateConfigSchema.optional(),
