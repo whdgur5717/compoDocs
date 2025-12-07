@@ -26,8 +26,17 @@ export class ComponentDetector {
     let name = ""
     if (Node.isFunctionDeclaration(node)) {
       name = node.getName() || ""
+      const isDefault = node.isDefaultExport()
+      if (hasJsxReturn && isDefault) {
+        return true
+      }
     } else if (Node.isVariableDeclaration(node)) {
       name = node.getName()
+    } else if (Node.isArrowFunction(node) || Node.isFunctionExpression(node)) {
+      const parent = node.getParent()
+      if (parent && Node.isVariableDeclaration(parent)) {
+        name = parent.getName()
+      }
     }
 
     const startsWithCapital = /^[A-Z]/.test(name)
