@@ -1,7 +1,7 @@
 import { Node, Type } from "ts-morph"
 
 import type { PropItem, PropsInfo, PropsOrigin } from "./types"
-import { formatPropsInfo } from "./formatter"
+import { formatProps } from "./formatter"
 
 // 첫 번째 파라미터 타입 추출: 함수 선언/화살표/함수식 공통
 function firstParamTypeFromFunctionLike(node: Node): Type | undefined {
@@ -230,5 +230,5 @@ export function extractPropsTypeInfo(node: Node): PropsInfo | null {
 // helper for callers who still need a formatted jsdoc block
 export function formatExtractedProps(info: PropsInfo | null): string | null {
   if (!info) return null
-  return formatPropsInfo(info, 0)
+  return formatProps(info)
 }
