@@ -20,6 +20,7 @@ export interface ParsedComponent {
   filePath: string
   hasGenerateTag: boolean
   props: PropsInfo | null
+  declarationText: string
 }
 
 export async function parseFile({ filePath }: { filePath: string }) {
@@ -92,6 +93,13 @@ export async function parseFile({ filePath }: { filePath: string }) {
     const targetNode = component.node
     const hasGenerate = hasJSDocTag(targetNode, "generate")
     const info = hasGenerate ? extractPropsTypeInfo(targetNode) : null
+    let declText = ""
+    if (Node.isFunctionDeclaration(targetNode)) {
+      declText = targetNode.getText()
+    } else if (Node.isVariableDeclaration(targetNode)) {
+      const vs = targetNode.getVariableStatement()
+      declText = vs ? vs.getText() : targetNode.getText()
+    }
 
     results.push({
       name: component.name,
@@ -99,6 +107,7 @@ export async function parseFile({ filePath }: { filePath: string }) {
       filePath,
       hasGenerateTag: hasGenerate,
       props: info,
+      declarationText: declText,
     })
   }
 
