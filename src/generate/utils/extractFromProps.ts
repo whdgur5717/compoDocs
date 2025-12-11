@@ -1,7 +1,7 @@
 import { Node, Type } from "ts-morph"
 
 import type { PropItem, PropsInfo, PropsOrigin } from "./types"
-import { formatProps } from "./formatter"
+import { formatPropsInfo } from "./formatter"
 
 // 첫 번째 파라미터 타입 추출: 함수 선언/화살표/함수식 공통
 function firstParamTypeFromFunctionLike(node: Node): Type | undefined {
@@ -149,15 +149,35 @@ function propsTypeFromArg(node: Node): Type | undefined {
 }
 
 function getTypeOrigin(type: Type): PropsOrigin {
-  const sym = type.getAliasSymbol() || type.getSymbol()
-  if (!sym) {
-    return { typeName: null, filePath: null }
-  }
-  const typeName = sym.getName() || null
-  const decls = sym.getDeclarations()
+  const symbol = type.getAliasSymbol() || type.getSymbol()
+  const typeName = symbol ? symbol.getName() || null : null
+  const decls = symbol ? symbol.getDeclarations() : []
   if (decls.length > 0) {
     const filePath = decls[0]?.getSourceFile().getFilePath() || "unknown"
     return { typeName, filePath }
+  }
+  const properties = type.getProperties()
+  if (properties.length > 0) {
+    const counts = new Map<string, number>()
+    for (const prop of properties) {
+      const pDecls = prop.getDeclarations()
+      if (pDecls.length === 0) continue
+      const pFile = pDecls[0]?.getSourceFile().getFilePath()
+      if (typeof pFile === "string" && pFile.length > 0) {
+        counts.set(pFile, (counts.get(pFile) ?? 0) + 1)
+      }
+    }
+    if (counts.size > 0) {
+      let bestPath = ""
+      let bestCount = -1
+      for (const [p, c] of counts) {
+        if (c > bestCount) {
+          bestPath = p
+          bestCount = c
+        }
+      }
+      return { typeName, filePath: bestPath }
+    }
   }
   return { typeName, filePath: null }
 }
@@ -227,8 +247,7 @@ export function extractPropsTypeInfo(node: Node): PropsInfo | null {
   return null
 }
 
-// helper for callers who still need a formatted jsdoc block
 export function formatExtractedProps(info: PropsInfo | null): string | null {
   if (!info) return null
-  return formatProps(info)
+  return formatPropsInfo(info, 0)
 }

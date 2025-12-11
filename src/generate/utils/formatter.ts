@@ -1,20 +1,15 @@
 import type { PropsInfo } from "./types"
 
-function sanitize(text: string): string {
-  return text.replace(/import\("[^"]+"\)\./g, "")
-}
-
-export function formatProps(info: PropsInfo) {
+export function formatPropsInfo(info: PropsInfo, _depth = 0) {
   const lines: string[] = []
   if (info.kind === "object") {
-    for (const prop of info.props) {
-      const nameOut = prop.optional ? `[${prop.name}]` : prop.name
-      const base = `@property {${sanitize(prop.type)}} ${nameOut}`
-      lines.push(prop.description ? `${base} - ${prop.description}` : base)
+    for (const p of info.props) {
+      const nameOut = p.optional ? `[${p.name}]` : p.name
+      const base = `@property {${p.type}} ${nameOut}`
+      lines.push(p.description ? `${base} - ${p.description}` : base)
     }
   } else {
-    lines.push(`@property {${sanitize(info.typeText)}} props`)
+    lines.push(`@property {${info.typeText}} props`)
   }
-  lines.push("<!-- This comment was AI-generated. Please review before using. -->")
   return lines.join("\n")
 }

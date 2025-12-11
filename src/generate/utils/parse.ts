@@ -1,11 +1,7 @@
-import path from "node:path"
-import { Node, Project } from "ts-morph"
-import { find } from "tsconfck"
+import { Node, type SourceFile } from "ts-morph"
 
 import type { PropsInfo } from "./types"
 import { ComponentDetector } from "./componentDetector"
-import { extractPropsTypeInfo } from "./extractFromProps"
-import { hasJSDocTag } from "./jsdoc"
 
 interface ComponentInfo {
   name: string
@@ -17,22 +13,13 @@ interface ComponentInfo {
 export interface ParsedComponent {
   name: string
   kind: string
-  filePath: string
+  filePath?: string
   hasGenerateTag: boolean
   props: PropsInfo | null
   declarationText: string
 }
 
-export async function parseFile({ filePath }: { filePath: string }) {
-  const dir = path.dirname(filePath)
-  const tsconfigPath = await find(dir)
-  if (tsconfigPath === null) {
-    throw new Error(`tsconfig not found near: ${filePath}`)
-  }
-  const project = new Project({ tsConfigFilePath: tsconfigPath })
-
-  const sourceFile =
-    project.getSourceFile(filePath) ?? project.addSourceFileAtPath(filePath)
+export function extractComponentFromFile(sourceFile: SourceFile) {
   const components: ComponentInfo[] = []
   const detector = new ComponentDetector()
 
@@ -87,29 +74,5 @@ export async function parseFile({ filePath }: { filePath: string }) {
     }
   })
 
-  // 4. @generate만 찾아서 Props 정보 수집 (파일에 주석은 추가하지 않음)
-  const results: ParsedComponent[] = []
-  for (const component of components) {
-    const targetNode = component.node
-    const hasGenerate = hasJSDocTag(targetNode, "generate")
-    const info = hasGenerate ? extractPropsTypeInfo(targetNode) : null
-    let declText = ""
-    if (Node.isFunctionDeclaration(targetNode)) {
-      declText = targetNode.getText()
-    } else if (Node.isVariableDeclaration(targetNode)) {
-      const vs = targetNode.getVariableStatement()
-      declText = vs ? vs.getText() : targetNode.getText()
-    }
-
-    results.push({
-      name: component.name,
-      kind: component.kind,
-      filePath,
-      hasGenerateTag: hasGenerate,
-      props: info,
-      declarationText: declText,
-    })
-  }
-
-  return results
+  return components
 }
