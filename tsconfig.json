@@ -19,8 +19,9 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
 
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmit": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/fixtures/**"]
 }

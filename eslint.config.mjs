@@ -9,6 +9,9 @@ import tseslint from "typescript-eslint"
 
 export default defineConfig([
   {
+    ignores: ["**/fixtures/**"],
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     plugins: { js },
     extends: ["js/recommended"],
