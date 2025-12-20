@@ -1,7 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "packages/ui" },
-    { "path": "packages/core" }
-  ]
+  "references": [{ "path": "packages/ui" }, { "path": "packages/core" }]
 }

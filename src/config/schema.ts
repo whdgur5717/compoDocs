@@ -6,7 +6,10 @@ export const workspaceConfigSchema = z.object({
   root: z.string(),
 })
 
-type Fetcher = (params: { signature: string; prompt: string }) => string | Promise<string>
+type Fetcher = (params: {
+  signature: string
+  prompt: string
+}) => string | Promise<string>
 
 const fetcherSchema = z.custom<Fetcher>((v) => typeof v === "function")
 

@@ -2,7 +2,7 @@ export default {
   workspace: {
     include: ["packages/*", "apps/*"],
     exclude: ["packages/legacy"],
-    root: ''
+    root: "",
   },
   commands: {
     generate: {
