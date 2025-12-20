@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest --run",
+    "format": "prettier --write --cache ."
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,9 @@
     "@eslint/js": "^9.39.1",
     "@eslint/json": "^0.14.0",
     "@eslint/markdown": "^7.5.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
@@ -22,13 +26,22 @@
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
     "ts-morph": "^27.0.2",
+    "tsconfck": "^3.1.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.1"
+    "typescript-eslint": "^8.48.1",
+    "vitest": "^4.0.15"
   },
   "dependencies": {
     "@types/node": "^24.10.1",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
+    "fast-glob": "^3.3.3",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "tsconfck": "^3.1.6",
+    "unconfig": "^7.4.2",
+    "vite": "^7.2.6",
     "zod": "^4.1.13"
   }
 }
