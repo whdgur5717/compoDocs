@@ -1,30 +1,42 @@
-# compoDocs
+# compodocs
 
-Automatically generate JSDoc documentation for React components by statically analyzing their Props.
+Generate JSDoc for React components by statically analyzing their props.
 
-compoDocs reads your TypeScript source, extracts prop types through the compiler API, and generates accurate JSDoc comments — optionally powered by AI. No more writing docs by hand, no more docs drifting out of sync.
+`compodocs` scans TypeScript/TSX files, finds components tagged for generation, extracts prop types with `ts-morph`, and writes JSDoc directly above each component declaration.
 
-## Features
+## What v1 does
 
-- **Static prop extraction** — Resolves prop types directly from TypeScript's type system via [ts-morph](https://github.com/dsherret/ts-morph). Supports generics, intersections, and utility types.
-- **Broad component detection** — Recognizes function declarations, arrow functions, `React.memo`, `React.forwardRef`, `React.lazy`, HOC wrappers (`withXxx`), and styled-components.
-- **AI-powered generation** — Bring your own LLM fetcher. compoDocs builds a structured prompt from extracted props and source code, sends it to your fetcher, and writes the result back.
-- **Fallback mode** — No AI configured? compoDocs still generates `@property` annotations from the type information alone.
-- **Non-destructive updates** — Only touches JSDoc blocks that have actually changed. Existing docs without the `@generate` tag are left untouched.
-- **Monorepo-ready** — Workspace-aware config with `include` / `exclude` glob patterns. Works with any pnpm/yarn/npm workspace layout.
+- Provides one CLI command: `compodocs generate`
+- Reads `compodocs.config.*` from your project
+- Finds tagged React components in the configured workspace
+- Extracts prop names, types, optional flags, and prop JSDoc descriptions
+- Writes or updates JSDoc in the source file itself
+- Optionally calls a user-provided `fetcher` for AI-generated JSDoc bodies
 
-## Usage
+## Installation
 
-**1. Add the `@generate` tag** to any component you want documented:
+```bash
+npm install -D compodocs
+```
+
+You can also run it without adding it to your repo:
+
+```bash
+npx compodocs generate --cwd .
+```
+
+## Quickstart
+
+Add a tag to the component you want to document:
 
 ```tsx
 /** @generate */
-export function Button(props: ButtonProps) {
-  return <button className={props.variant}>{props.children}</button>
+export function Button(props: { label: string }) {
+  return <button>{props.label}</button>
 }
 ```
 
-**2. Create a config file** (`compodocs.config.ts`):
+Create `compodocs.config.ts`:
 
 ```ts
 export default {
@@ -41,17 +53,132 @@ export default {
 }
 ```
 
-**3. Run the CLI:**
+Run:
 
 ```bash
 npx compodocs generate --cwd .
 ```
 
-compoDocs scans your workspace, finds components tagged with `@generate`, extracts their props, and writes JSDoc directly above each declaration.
+Fallback output without AI looks like this:
 
-## AI Fetcher
+```ts
+/**
+ * @property {string} label
+ */
+export function Button(props: { label: string }) {
+  return <button>{props.label}</button>
+}
+```
 
-To enable AI-powered documentation, provide a `fetcher` function in your config:
+## CLI
+
+```bash
+compodocs generate --cwd <path> [--config <dir>]
+```
+
+- `--cwd`: workspace root used for glob expansion and relative path resolution
+- `--config`: optional directory that contains `compodocs.config.*`
+
+If `--config` is omitted, `compodocs` looks for the config file in `--cwd`.
+
+## Configuration
+
+```ts
+export default {
+  workspace: {
+    include: ["packages/*"],
+    exclude: ["packages/legacy"],
+    root: ".",
+  },
+  commands: {
+    generate: {
+      files: ["**/*.tsx"],
+      exclude: ["**/*.stories.tsx"],
+      tag: "generate",
+      jsdoc: {
+        fetcher: async ({ prompt, signature }) => {
+          return "..."
+        },
+      },
+    },
+  },
+}
+```
+
+### Config shape
+
+```ts
+type Config = {
+  workspace: {
+    include: string[]
+    exclude?: string[]
+    root: string
+  }
+  commands: {
+    generate: {
+      files: string[]
+      exclude?: string[]
+      tag: string
+      jsdoc?: {
+        fetcher: (params: {
+          prompt: string
+          signature: string
+        }) => string | Promise<string>
+      }
+    }
+  }
+}
+```
+
+## AI fetcher
+
+`compodocs` is vendor-agnostic. It does not ship with a built-in model provider. Instead, you provide a `fetcher` function that receives:
+
+- `prompt`: the generated prompt with props data and source code
+- `signature`: JSON metadata for the current component
+
+The `fetcher` must return the JSDoc body string to insert into the file.
+
+### Example: Anthropic Agent SDK
+
+```ts
+import { query } from "@anthropic-ai/claude-agent-sdk"
+
+export default {
+  workspace: {
+    include: ["packages/*"],
+    root: ".",
+  },
+  commands: {
+    generate: {
+      files: ["**/*.tsx"],
+      tag: "generate",
+      jsdoc: {
+        fetcher: async ({ prompt }) => {
+          let result = ""
+
+          for await (const message of query({
+            prompt,
+            options: {
+              maxTurns: 1,
+              permissionMode: "dontAsk",
+              tools: [],
+            },
+          })) {
+            if (message.type === "result" && message.subtype === "success") {
+              result = message.result
+            }
+          }
+
+          return result
+        },
+      },
+    },
+  },
+}
+```
+
+### Example: custom HTTP backend
 
 ```ts
 export default {
@@ -65,19 +192,20 @@ export default {
       tag: "generate",
       jsdoc: {
         fetcher: async ({ prompt, signature }) => {
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          const response = await fetch("https://example.com/api/jsdoc", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
             },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              messages: [{ role: "user", content: prompt }],
-            }),
+            body: JSON.stringify({ prompt, signature }),
           })
-          const json = await res.json()
-          return json.choices[0].message.content
+
+          if (!response.ok) {
+            throw new Error(`Fetcher failed with ${response.status}`)
+          }
+
+          const data = await response.json()
+          return data.jsdoc
         },
       },
     },
@@ -85,86 +213,21 @@ export default {
 }
 ```
 
-The fetcher receives `prompt` (the full generation prompt with props data) and `signature` (component metadata as JSON). Return the JSDoc body as a string.
+## Supported component patterns
 
-## What Gets Generated
+- Function declarations
+- PascalCase arrow/function expression components
+- `React.memo(...)`
+- `React.forwardRef(...)`
+- `React.lazy(...)`
+- HOC wrappers like `withAuth(Component)`
+- styled-component style declarations
 
-Given a component like this:
+## Notes
 
-```tsx
-interface AlertDialogProps {
-  /** Whether the dialog is currently open */
-  open: boolean
-  /** Callback fired when the open state changes */
-  onOpenChange?: (open: boolean) => void
-  children: React.ReactNode
-}
-
-/** @generate */
-export function AlertDialog(props: AlertDialogProps) { ... }
-```
-
-compoDocs generates:
-
-```ts
-/**
- * @description A dialog component that displays an alert to the user.
- * @component
- * @param {AlertDialogProps} props - The component props.
- * @property {boolean} open - Whether the dialog is currently open
- * @property {(open: boolean) => void} [onOpenChange] - Callback fired when the open state changes
- * @property {React.ReactNode} children
- * @returns {JSX.Element}
- * @example
- * import { AlertDialog } from './AlertDialog'
- *
- * <AlertDialog open={true} onOpenChange={(v) => setOpen(v)}>
- *   <p>Are you sure?</p>
- * </AlertDialog>
- * <!-- This comment was AI-generated. Please review before using. -->
- */
-```
-
-## Detected Component Patterns
-
-| Pattern | Example |
-|---|---|
-| Function declaration | `function Button() { ... }` |
-| Arrow function | `const Button = () => { ... }` |
-| `React.memo` | `const Button = memo(ButtonInner)` |
-| `React.forwardRef` | `const Input = forwardRef((props, ref) => ...)` |
-| `React.lazy` | `const Page = lazy(() => import('./Page'))` |
-| HOC wrapper | `const Page = withAuth(BasePage)` |
-| styled-components | `` const Box = styled.div`...` `` |
-
-## Configuration
-
-```ts
-// compodocs.config.ts
-export default {
-  workspace: {
-    include: string[]     // Workspace package globs (default: ["packages/*"])
-    exclude?: string[]    // Packages to skip
-    root: string          // Workspace root directory
-  },
-  commands: {
-    generate: {
-      files: string[]     // File globs to scan (default: ["**/*.tsx"])
-      exclude?: string[]  // Files to skip
-      outputDir: string   // Output directory (default: "__generated__")
-      tag: string         // JSDoc tag to trigger generation (default: "generate")
-      jsdoc?: {
-        fetcher: (params: { prompt: string, signature: string }) => string | Promise<string>
-      }
-    },
-    build?: {
-      outputDir: string   // Markdown docs output (default: "docs")
-    }
-  }
-}
-```
-
-Config files are resolved from the `--cwd` directory. Supported formats: `.ts`, `.mts`, `.cts`, `.js`, `.mjs`, `.cjs`, `.json`.
+- `compodocs` only touches declarations tagged with the configured `tag`
+- Existing JSDoc is replaced only when the generated body changes
+- If no `fetcher` is configured, `compodocs` still generates minimal `@property` lines from static type information
 
 ## License
 

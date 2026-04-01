@@ -1,6 +1,4 @@
-import path from "node:path"
-import { Project, type SourceFile } from "ts-morph"
-import { find } from "tsconfck"
+import type { SourceFile } from "ts-morph"
 
 export interface ApplyJSDocParams {
   filePath: string
@@ -18,28 +16,30 @@ export async function applyJSDoc(
 
   if (kind === "FunctionDeclaration") {
     const functionDeclaration = sourceFile.getFunction(componentName)
-    if (!functionDeclaration) return
+    if (!functionDeclaration) return false
     const jsDocNodes = functionDeclaration.getJsDocs()
     const current = jsDocNodes
       .map((d) => d.getInnerText().trim())
       .join("\n")
       .trim()
     const next = text.trim()
-    if (current === next) return
+    if (current === next) return false
     jsDocNodes.forEach((d) => d.remove())
     functionDeclaration.addJsDoc(text)
+    return true
   } else {
     const variableDeclaration = sourceFile.getVariableDeclaration(componentName)
     const variableStatement = variableDeclaration?.getVariableStatement()
-    if (!variableStatement) return
+    if (!variableStatement) return false
     const jsDocNodes = variableStatement.getJsDocs()
     const current = jsDocNodes
       .map((d) => d.getInnerText().trim())
       .join("\n")
       .trim()
     const next = text.trim()
-    if (current === next) return
+    if (current === next) return false
     jsDocNodes.forEach((d) => d.remove())
     variableStatement.addJsDoc(text)
+    return true
   }
 }

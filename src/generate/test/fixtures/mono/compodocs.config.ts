@@ -7,7 +7,6 @@ export default {
   commands: {
     generate: {
       files: ["**/*.tsx"],
-      outputDir: "__generated__",
       tag: "generate",
     },
   },

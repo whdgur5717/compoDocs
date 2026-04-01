@@ -1,10 +1,10 @@
 import { loadConfig as loadUserConfig } from "unconfig"
 import { configSchema } from "./schema"
 
-export async function loadConfig(cwd: string) {
+export async function loadConfig(configDir: string) {
   try {
     const { config, sources } = await loadUserConfig({
-      cwd,
+      cwd: configDir,
       sources: [
         {
           files: "compodocs.config",
@@ -14,7 +14,7 @@ export async function loadConfig(cwd: string) {
     })
     if (!sources || sources.length === 0) {
       throw new Error(
-        `Config file not found in ${cwd}. Expected 'compodocs.config.*'`,
+        `Config file not found in ${configDir}. Expected 'compodocs.config.*'`,
       )
     }
 
